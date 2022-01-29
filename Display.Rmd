@@ -1,0 +1,222 @@
+---
+title: "Datathon Loan Project"
+author: "Sebastian DiPrampero, Steven Cloud, Mohamed Abead, Alex Rosales"
+date: "1/28/2022"
+output: ioslides_presentation
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+
+defaultW <- getOption("warn") 
+
+options(warn = -1) 
+
+library(ggplot2)
+library(grid)
+library(gridBase)
+library(dplyr)
+library(shiny)
+
+dat = read.csv("C:/Users/sebas/OneDrive/Documents/Datathon2022/Project/track.csv")
+
+as.data.frame(table(dat$census_tract[complete.cases(dat$census_tract)]))
+
+
+table(na.omit(dat$census_tract))
+
+dat$accepted[unique(na.omit(dat$census_tract))]
+
+dat$accepted
+
+options(warn = defaultW)
+
+```
+
+
+```{r}
+
+
+lin.reg.log = function(balloon, invest.prop, loan.amount, median.fam.income, 
+                       race, loan.type, total.units, busi.comm)
+{
+  
+  if(balloon == "Yes")
+  {
+    balloon = 1
+  }
+  else
+  {
+    balloon = 0
+  }
+  if(invest.prop == "Yes")
+  {
+    invest.prop = 1
+  }
+  else
+  {
+    invest.prop = 0
+  }
+  if(race == "Hispanic")
+  {
+    hispanic = 1
+  }
+  else
+  {
+    hispanic = 0
+  }
+  if(loan.type == "FHA")
+  {
+    loan.type = 1
+  }
+  else
+  {
+    loan.type = 0
+  }
+  
+  ir = (0.4271*balloon) + (0.6727*invest.prop) + (-0.0000002847*loan.amount) +
+    (-0.0003517*median.fam.income) + (0.1188* hispanic) + 
+    (0.2326*loan.type) + 31.35
+  
+  
+  asian = 0
+  alaskan = 0
+  mixed = 0
+  
+  if(race == "Asian")
+  {
+    asian = 1
+  }
+  if(race == "American Indian/Alaskan Native")
+  {
+    alaskan = 1
+  }
+  if(race == "Two or more minority races")
+  {
+    mixed = 1
+  }
+  if(busi.comm == "Yes")
+  {
+    busi.comm = 1
+  }
+  else
+  {
+    busi.comm = 0
+  }
+  
+  app.help = (-0.15176*asian) + (-0.50282*alaskan) + (-0.56145*mixed) +
+    (-0.43733*total.units) + (-0.34373*busi.comm) + 2.57427
+  
+  approval = exp(app.help)/(1+exp(app.help))
+  
+  approval = round(100*approval,2)
+  
+  return(c(approval, ir))
+}
+
+
+#install.packages("shiny")
+library(shiny)
+
+ui = fluidPage(
+  
+  titlePanel("Loan Predictor"),
+  
+  sidebarLayout(
+    sidebarPanel(
+           selectInput("balloon", 
+                  "Do you have a balloon payment?", 
+                  choices = c("Yes", "No"),
+                  multiple = FALSE),
+           selectInput("invest.prop", 
+                  "Is your mortage aimed at an investment property?", 
+                  choices = c("Yes", "No"),
+                  multiple = FALSE),
+           numericInput("loan.amount", 
+                  "What is your loan amount?", 
+                  min = 0, max = 250000, value = 50000),
+           numericInput("median.fam.income", 
+                  "Estimate the median income in your tract",
+                  min = 0, max = 250000, value = 50000),
+           selectInput("race",
+                       "Choose the race you identify with",
+                       choices = c("Hispanic", "White", "Black",
+                                   "Asian", "American Indian/Alaskan Native",
+                                   "Two or more minority races",
+                                   "Other"),
+                                    multiple = FALSE),
+           selectInput("loan.type",
+                       "What is your loan type?",
+                       choices = c("FHA", "Conventional","VA", "RHS/FSA"),
+                       multiple = FALSE),
+           numericInput("total.units",
+                        "How many residential units are in the house you are applying for?",
+                        min = 1, max = 4, value = 1),
+           selectInput("busi.comm",
+                       "Is your mortgage aimed at business or commercial use?",
+                       choices = c("Yes", "No"))
+           
+    ),
+    
+    mainPanel(
+      plotOutput("kPlot")
+      
+    )
+    
+      
+  )
+
+)
+
+
+
+
+grid.newpage()
+
+server = function(input, output)
+{
+ 
+  output$kPlot = renderPlot({
+    temp = lin.reg.log(input$balloon, input$invest.prop, input$loan.amount, 
+                       input$median.fam.income,input$race, input$loan.type, 
+                       input$total.units, input$busi.comm)
+    if(temp[1]>70)
+    {
+      rec = rectGrob(x = 0.5, y = 0.95, width = 1.1, height = 0.1,
+                         gp = gpar(fill = "green"))
+      grid.draw(rec)
+    }
+    else if(temp[1]>40)
+    {
+      rec = rectGrob(x = 0.5, y = 0.95, width = 1.1, height = 0.1,
+                         gp = gpar(fill = "yellow"))
+      grid.draw(rec)
+    }
+    else
+    {
+      rec = rectGrob(x = 0.5, y = 0.95, width = 1.1, height = 0.1,
+                         gp = gpar(fill = "red"))
+      grid.draw(rec)
+    }
+      
+      
+    grid.text(paste("Your loan would have a ", temp[1],"% chance of being approved"), 
+              x = 0.5, y = 0.95, gp = gpar(fontsize = 20, col = "black"))
+    grid.text("Your interest rate would be approxiamtely: ", x = 0.5, y = 0.65,
+            gp = gpar(fontsize = 20, col = "black"))
+    grid.text(round(temp[2],2), x=0.5, y = 0.5,
+              gp = gpar(fontsize = 20, col = "black"))
+
+  })
+}
+
+shinyApp(ui = ui, server = server)
+
+
+
+```
+
