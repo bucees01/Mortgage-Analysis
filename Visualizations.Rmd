@@ -1,0 +1,87 @@
+---
+title: "Visualizations"
+author: "Sebastian DiPrampero"
+date: "1/29/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(grid)
+library(gridBase)
+library(dplyr)
+library(shiny)
+
+dat = read.csv("C:/Users/sebas/OneDrive/Documents/Datathon2022/Project/track.csv")
+
+```
+
+
+```{r}
+
+low = dat$accepted[dat$tract_to_msa_income_percentage<50]
+
+fifty.up = dat$accepted[dat$tract_to_msa_income_percentage>50 & 
+                          dat$tract_to_msa_income_percentage<100]
+
+hundred.up = dat$accepted[dat$tract_to_msa_income_percentage>100 &
+                            dat$tract_to_msa_income_percentage<150]
+
+hfifty.up = dat$accepted[dat$tract_to_msa_income_percentage>150 &
+                           dat$tract_to_msa_income_percentage<200]
+
+high = dat$accepted[dat$tract_to_msa_income_percentage>200]
+
+low.pct = sum(low)/length(low)
+fift.up.pct = sum(fifty.up)/length(fifty.up)
+hundred.up.pct = sum(hundred.up)/length(hundred.up)
+hfifty.up.pct = sum(hfifty.up)/length(hfifty.up)
+high.pct = sum(high)/length(high)
+
+
+bruh = data.frame(y = c(low.pct, fift.up.pct, hundred.up.pct, 
+                        hfifty.up.pct, high.pct),
+                  x = c("<50","050-100","100-150","150-200","200+"))
+
+ggplot(data = bruh, 
+       aes(x=x, y=y, group = 1)) +
+  geom_line()+ geom_point()+
+  ylab("Pct Approval") + xlab("Tract to MSA Income Pct") + 
+  ggtitle("Approval Rate of Tract to MSA Pct") + ylim(min = .73, max = .92)
+
+```
+
+
+#Loan Type from Tract Minority Population Percentage
+
+```{r}
+
+theme_set(theme_classic())
+
+
+conventional = dat$tract_minority_pop_percent[dat$loan_type == "Conventional"]
+conv.pct = sum(conventional)/length(conventional)
+
+FHA = dat$tract_minority_pop_percent[dat$loan_type == "FHA"]
+FHA.pct = sum(FHA)/length(FHA)
+
+VA = dat$tract_minority_pop_percent[dat$loan_type == "VA"]
+VA.pct = sum(VA)/length(VA)
+
+RHS.FSA = dat$tract_minority_pop_percent[dat$loan_type == "RHS/FSA"]
+RHS.FSA.pct = sum(RHS.FSA)/length(RHS.FSA)
+
+head(dat$tract_minority_pop_percent)
+
+bruh2 = data.frame(x = c("Conventional","FHA","VA","RHS/FSA"), 
+                   y = c(conv.pct, FHA.pct, VA.pct, RHS.FSA.pct))
+
+ggplot(data = bruh2, aes(x = x, y = y))+
+  geom_bar(stat = "identity") + ylab("Pct of Minorities in Tract")+ xlab("Loan Type")+
+  ggtitle("Pct of Minority Population in Tract by Loan Type")
+
+```
